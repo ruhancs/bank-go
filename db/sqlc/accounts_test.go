@@ -55,9 +55,10 @@ func TestUpdateAccount(t *testing.T) {
 		Balance: util.RandomMoney(),
 	}
 
-	err := testQueries.UpdateAccount(context.Background(),arg)
+	updatedAccount,err := testQueries.UpdateAccount(context.Background(),arg)
 
 	require.NoError(t,err)
+	require.NotEmpty(t,updatedAccount)
 }
 
 func TestDeleteAccount(t *testing.T) {
