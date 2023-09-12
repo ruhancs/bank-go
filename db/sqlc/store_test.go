@@ -110,3 +110,57 @@ func TestTransferTx(t *testing.T) {
 	require.Equal(t, account2.Balance + int64(n) * amount, updatedAccont2.Balance)
 
 }
+
+func TestTransferTxDeadlock(t *testing.T) {
+	store := Newstore(testDB)
+
+	account1 := createRandomAccount(t)
+	account2 := createRandomAccount(t)
+	fmt.Println("Beffore",account1.Balance, account2.Balance)
+	fmt.Println(account2.Balance)
+
+	// rodar n operacoes de transferencia e concorrente
+	n := 10
+	amount := int64(10)
+
+	errs := make(chan error)
+	
+	for i := 0; i < n; i++ {
+		fromAccountID := account1.ID
+		toAccountID := account2.ID
+
+		//alternar as transacoes de uma conta para outra para gerar erro de deadlock
+		if i % 2 == 1 {
+			fromAccountID = account2.ID
+			toAccountID = account1.ID
+		}
+
+		go func() {
+			//contexto para inserir o nome da transacao, txKey criado em store.go
+			ctx := context.Background()
+			_,err := store.TranferTx(ctx,TranferTxParams{
+				FromAccountID: fromAccountID,
+				ToAccountID: toAccountID,
+				Amount: amount,
+			})
+
+			errs <- err
+		}()
+	}
+
+	for i := 0; i < n; i++ {
+		err := <-errs
+		require.NoError(t,err)
+	}
+
+	updatedAccont1,err := testQueries.GetAccount(context.Background(), account1.ID)
+	require.NoError(t,err)
+	
+	updatedAccont2,err := testQueries.GetAccount(context.Background(), account2.ID)
+	require.NoError(t,err)
+
+	fmt.Println("Beffore",updatedAccont1.Balance, updatedAccont2.Balance)
+	require.Equal(t, account1.Balance, updatedAccont1.Balance)
+	require.Equal(t, account2.Balance, updatedAccont2.Balance)
+
+}
