@@ -11,7 +11,8 @@ import (
 //body do http
 type createAccountRequest struct {
 	Owner    string `json:"owner" binding:"required"`
-	Currency string `json:"currency" binding:"required,oneof=EUR USD BRL"`
+	//currency criado validator customizado em validator.go e em server
+	Currency string `json:"currency" binding:"required,currency"`
 }
 
 //gin.Context para pegar os parametros de entrada
