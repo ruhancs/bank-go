@@ -1,0 +1,16 @@
+ migrate create -ext sql -seq init_schema = gerar migracao
+ migrate create -ext sql -dir db/migration -seq add_users = gerar migracao com referencia a pasta
+
+ //iniciar migracao
+ migrate -path db/migration -database "postgresql://postgres:123456@localhost:5432/bank?sslmode=disable" -verbose up
+ migrate -database "postgresql://postgres:123456@localhost:5432/bank?sslmode=disable" -verbose up
+
+ //sqlc
+ sqlc help
+ sqlc init = cria sqlc.yaml
+ sqlc generate =  gera as queries conforme o sqlc.yaml
+
+ //gerar mock do db, Store é o nome da interface para mock
+ mockgen -destination db/mock/store.go github.com/ruhancs/bank-go/db/sqlc Store
+
+ mockgen -source=github.com/ruhancs/bank-go/db/sqlc Store -destination=db/mock/store.go
