@@ -6,19 +6,25 @@ import (
 	"fmt"
 )
 
-type Store struct {
+type Store interface {
+	Querier
+	TranferTx(ctx context.Context, arg TranferTxParams) (TransferTxResult, error)
+	execTx(ctx context.Context, fn func(*Queries) error) error
+}
+
+type SQLStore struct {
 	*Queries
 	db *sql.DB
 }
 
-func Newstore(db *sql.DB) *Store{
-	return &Store{
+func Newstore(db *sql.DB) Store{
+	return &SQLStore{
 		db: db,
 		Queries: New(db),
 	}
 }
 
-func (store *Store) execTx(ctx context.Context, fn func(*Queries) error) error {
+func (store *SQLStore) execTx(ctx context.Context, fn func(*Queries) error) error {
 	//parametro nil seria isolacao customizada para transacoes
 	tx,err := store.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -57,7 +63,7 @@ type TransferTxResult struct {
 //transfere dinheiro de uma conta para outra
 // cria tranferencia na tabela transfers, cria entry na tabela entries, atualiza as contas de recebimento e de saida
 //tudo em uma operacao com db
-func (store *Store) TranferTx(ctx context.Context, arg TranferTxParams) (TransferTxResult, error) {
+func (store *SQLStore) TranferTx(ctx context.Context, arg TranferTxParams) (TransferTxResult, error) {
 	var result TransferTxResult
 
 	err := store.execTx(ctx, func(q *Queries) error {
