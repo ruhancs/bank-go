@@ -2,7 +2,6 @@ package api
 
 import (
 	"database/sql"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,6 +10,7 @@ import (
 )
 
 //body do http
+//VALIDATOR PLAYGROUND VALIDATOR
 type createAccountRequest struct {
 	Owner    string `json:"owner" binding:"required"`
 	//currency criado validator customizado em validator.go e em server
