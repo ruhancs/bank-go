@@ -31,7 +31,10 @@ func main() {
 	}
 
 	store := db.Newstore(conn)
-	server := api.NewServer(store)
+	server,err := api.NewServer(store)
+	if err != nil {
+		log.Fatal("cannot instance server: ",err)
+	}
 
 	err = server.Start(serverAddress)
 	if err != nil {
