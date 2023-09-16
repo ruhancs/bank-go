@@ -94,8 +94,9 @@ type loginUserResponse struct {
 }
 
 func (server *Server) loginUser(ctx *gin.Context) {
-	err := godotenv.Load("../.env")
+	err := godotenv.Load()
 	if err != nil {
+		fmt.Println(err)
 		fmt.Println("Error loading .env")
 	}
 	
@@ -121,7 +122,7 @@ func (server *Server) loginUser(ctx *gin.Context) {
 	}
 
 	tokenDuration,_ := strconv.Atoi(os.Getenv("ACCESS_TOKEN_DURATION")) 
-	duration := time.Duration(tokenDuration)
+	duration := time.Duration(tokenDuration * int(time.Minute))
 	accessToken,err := server.tokenMaker.CreateToken(req.Username,duration)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError,errorResponse(err))
