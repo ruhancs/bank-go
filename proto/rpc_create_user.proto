@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+//agrupar os protofiles juntos
+package pb;
+
+import "user.proto";
+
+option go_package = "github.com/ruhancs/bank-go/pb";
+
+//mensagem da resposta
+message CreateUserRequest {
+    string username = 1;
+    string fullname = 2;
+    string email = 3;
+    string password = 4;
+}
+
+message CreateUserResponse {
+    User user = 1;
+}
