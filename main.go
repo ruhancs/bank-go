@@ -37,6 +37,7 @@ func main() {
 	}
 
 	store := db.Newstore(conn)
+	go runGinServer(store)
 	runGRPCServer(store)
 }
 
