@@ -7,6 +7,9 @@ import (
 	"net"
 	"os"
 
+	"github.com/golang-migrate/migrate/v4" //migracoes automaticas do db
+	_ "github.com/golang-migrate/migrate/v4/source/file"//driver de migracao via local file
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"//driver de migracao do db
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq" //driver postgres
 	"github.com/ruhancs/bank-go/api"
@@ -35,6 +38,8 @@ func main() {
 	if err != nil {
 		log.Fatal("cannot connect to db")
 	}
+
+	runDBMigrations(os.Getenv("MIGRATION_URL"), dbSource)
 
 	store := db.Newstore(conn)
 	go runGinServer(store)
@@ -75,4 +80,19 @@ func runGinServer(store db.Store) {
 		log.Fatal("cannot start server")
 	}
 
+}
+
+//migratioURL pasta que contem os arquivos das migracoes
+func runDBMigrations(migratioURL, dbSource string) {
+	migration,err := migrate.New(migratioURL,dbSource)
+	if err != nil {
+		log.Fatal("cannot create migrate instance: ",err)
+	}
+	
+	//verificar se ocorreu erro nas migracoes e se o erro é sem altercoes nas migracoes
+	if err = migration.Up(); err != nil && err != migrate.ErrNoChange {
+		log.Fatal("cannot run migrations up: ",err)
+	}
+
+	log.Println("db migrations successfuly")
 }
