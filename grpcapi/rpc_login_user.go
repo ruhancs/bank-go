@@ -12,6 +12,8 @@ import (
 	db "github.com/ruhancs/bank-go/db/sqlc"
 	"github.com/ruhancs/bank-go/pb"
 	"github.com/ruhancs/bank-go/util"
+	"github.com/ruhancs/bank-go/val"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -22,6 +24,11 @@ func (server *Server) LoginUser(ctx context.Context, req *pb.LoginUserRequest) (
 	if err != nil {
 		fmt.Println(err)
 		fmt.Println("Error loading .env")
+	}
+
+	violations := validateLoginUserRequest(req)
+	if violations != nil {
+		return nil,invalidArgumentError(violations)
 	}
 
 	user,err := server.store.GetUser(ctx,req.GetUsername())
@@ -78,4 +85,15 @@ func (server *Server) LoginUser(ctx context.Context, req *pb.LoginUserRequest) (
 	}
 
 	return resp,nil
+}
+
+func validateLoginUserRequest(req *pb.LoginUserRequest) (violations []*errdetails.BadRequest_FieldViolation) {
+	if err := val.ValidateUsername(req.GetUsername()); err != nil {
+		violations = append(violations, fieldViolation("username", err))
+	}
+	if err := val.ValidatePassword(req.GetPassword()); err != nil {
+		violations = append(violations, fieldViolation("password", err))
+	}
+
+	return violations
 }
