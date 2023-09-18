@@ -7,15 +7,17 @@ import (
 	"net"
 	"os"
 
-	"github.com/golang-migrate/migrate/v4" //migracoes automaticas do db
-	_ "github.com/golang-migrate/migrate/v4/source/file"//driver de migracao via local file
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"//driver de migracao do db
+	"github.com/golang-migrate/migrate/v4"                     //migracoes automaticas do db
+	_ "github.com/golang-migrate/migrate/v4/database/postgres" //driver de migracao do db
+	_ "github.com/golang-migrate/migrate/v4/source/file"       //driver de migracao via local file
+	"github.com/hibiken/asynq"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq" //driver postgres
 	"github.com/ruhancs/bank-go/api"
 	db "github.com/ruhancs/bank-go/db/sqlc"
 	"github.com/ruhancs/bank-go/grpcapi"
 	"github.com/ruhancs/bank-go/pb"
+	"github.com/ruhancs/bank-go/worker"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -42,13 +44,32 @@ func main() {
 	runDBMigrations(os.Getenv("MIGRATION_URL"), dbSource)
 
 	store := db.Newstore(conn)
+
+	//conexao com redis
+	redisOpt := asynq.RedisClientOpt{
+		Addr: os.Getenv("REDIS_ADDRESS"),
+	}
+
+	//criar o distribudor de tarefas asyncronas
+	taskDistributor := worker.NewRedisTaskDistributor(redisOpt)
+
+	go runTaskProcessor(redisOpt,store)
 	go runGinServer(store)
-	runGRPCServer(store)
+	runGRPCServer(store,taskDistributor)
 }
 
-func runGRPCServer(store db.Store) {
+func runTaskProcessor(redisOpt asynq.RedisClientOpt, store db.Store) {
+	taskProcessor := worker.NewRedisProcessor(redisOpt,store)
+	err := taskProcessor.Start()
+	if err != nil {
+		log.Fatal("failed to satrt task processor")
+	}
+
+}
+
+func runGRPCServer(store db.Store, taskDistributor worker.TaskDistributor) {
 	//criar novo grpc-server
-	server,err := grpcapi.NewServer(store)
+	server,err := grpcapi.NewServer(store,taskDistributor)
 	if err != nil {
 		log.Fatal("cannot instance server: ",err)
 	}

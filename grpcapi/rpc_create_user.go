@@ -2,12 +2,15 @@ package grpcapi
 
 import (
 	"context"
+	"time"
 
+	"github.com/hibiken/asynq"
 	"github.com/lib/pq"
 	db "github.com/ruhancs/bank-go/db/sqlc"
 	"github.com/ruhancs/bank-go/pb"
 	"github.com/ruhancs/bank-go/util"
 	"github.com/ruhancs/bank-go/val"
+	"github.com/ruhancs/bank-go/worker"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -41,6 +44,21 @@ func (server *Server) CreateUser(ctx context.Context, req *pb.CreateUserRequest)
 			}
 		}
 		return nil, status.Errorf(codes.Internal, "failed to create user")
+	}
+
+	//enviar task de email  verificacao
+	taskPayload := &worker.PayloadSendVerifyEmail{
+		Username: user.Username,
+	}
+
+	opt := []asynq.Option{
+		asynq.MaxRetry(10),//tentativas para reenviar a task
+		asynq.ProcessIn(10 * time.Second),//delay na tarefa
+		asynq.Queue(worker.QueueCritical),
+	}
+	err = server.taskDistributor.DistributeTaskSendVerifyEmail(ctx,taskPayload, opt...)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to send task to verify email: %s", err)
 	}
 
 	resp := &pb.CreateUserResponse{

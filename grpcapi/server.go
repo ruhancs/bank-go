@@ -8,15 +8,17 @@ import (
 	db "github.com/ruhancs/bank-go/db/sqlc"
 	"github.com/ruhancs/bank-go/pb"
 	"github.com/ruhancs/bank-go/token"
+	"github.com/ruhancs/bank-go/worker"
 )
 
 type Server struct {
 	pb.UnimplementedBankServer//para nao precisar implementar as funcoes ao utilizar RegisterBankServer
 	store db.Store
 	tokenMaker token.Maker
+	taskDistributor worker.TaskDistributor
 }
 
-func NewServer(store db.Store) (*Server,error) {
+func NewServer(store db.Store, taskDistributor worker.TaskDistributor) (*Server,error) {
 	err := godotenv.Load()
 	if err != nil {
 		fmt.Println("Error loading .env")
@@ -31,6 +33,7 @@ func NewServer(store db.Store) (*Server,error) {
 	server := &Server{
 		store: store,
 		tokenMaker: tokenMaker,
+		taskDistributor: taskDistributor,
 	}
 
 	return  server,nil
